@@ -23,6 +23,10 @@ def init_db():
     CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,email TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS budgets (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,month TEXT NOT NULL,income REAL NOT NULL DEFAULT 0,savings_goal REAL NOT NULL DEFAULT 0,food REAL NOT NULL DEFAULT 0,transport REAL NOT NULL DEFAULT 0,education REAL NOT NULL DEFAULT 0,hostel REAL NOT NULL DEFAULT 0,bills REAL NOT NULL DEFAULT 0,shopping REAL NOT NULL DEFAULT 0,entertainment REAL NOT NULL DEFAULT 0,healthcare REAL NOT NULL DEFAULT 0,subscriptions REAL NOT NULL DEFAULT 0,other REAL NOT NULL DEFAULT 0,UNIQUE(user_id,month),FOREIGN KEY(user_id) REFERENCES users(id));
     CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,amount REAL NOT NULL,category TEXT NOT NULL,description TEXT,spent_on TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id));
+    CREATE TABLE IF NOT EXISTS conversations (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,month TEXT NOT NULL,user_message TEXT NOT NULL,assistant_response TEXT NOT NULL,ai_enabled INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id));
+    CREATE TABLE IF NOT EXISTS activity_logs (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,action TEXT NOT NULL,details TEXT,created_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id));
+    CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses(user_id, spent_on);
+    CREATE INDEX IF NOT EXISTS idx_conversations_user_created ON conversations(user_id, created_at);
     ''')
     # Safe migration for older databases.
     for table in ('budgets','expenses'):
@@ -42,14 +46,50 @@ def login_required(f):
 
 def month_now(): return datetime.now().strftime('%Y-%m')
 def empty_budget(month):
-    return {'id':None,'month':month,'income':0,'savings_goal':0,'food':0,'transport':0,'education':0,'hostel':0,'bills':0,'shopping':0,'entertainment':0,'healthcare':0,'subscriptions':0,'other':0}
-def get_budget(user_id,month):
-    conn=db(); row=conn.execute('SELECT * FROM budgets WHERE user_id=? AND month=?',(user_id,month)).fetchone(); conn.close(); return dict(row) if row else empty_budget(month)
+    return {
+        'id': None,
+        'month': month,
+        'income': 0,
+        'savings_goal': 0,
+        'food': 0,
+        'transport': 0,
+        'education': 0,
+        'hostel': 0,
+        'bills': 0,
+        'shopping': 0,
+        'entertainment': 0,
+        'healthcare': 0,
+        'subscriptions': 0,
+        'other': 0
+    }
+
+def get_budget(user_id, month):
+    conn = db()
+    row = conn.execute(
+        'SELECT * FROM budgets WHERE user_id=? AND month=?',
+        (user_id, month)
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        return empty_budget(month)
+
+    full = dict(row)
+    fields = (
+        'id', 'month', 'income', 'savings_goal', 'food', 'transport',
+        'education', 'hostel', 'bills', 'shopping', 'entertainment',
+        'healthcare', 'subscriptions', 'other'
+    )
+    return {key: full.get(key, 0) for key in fields}
 def get_expenses(user_id,month=None):
     conn=db()
     if month: rows=conn.execute('SELECT * FROM expenses WHERE user_id=? AND substr(spent_on,1,7)=? ORDER BY spent_on DESC,id DESC',(user_id,month)).fetchall()
     else: rows=conn.execute('SELECT * FROM expenses WHERE user_id=? ORDER BY spent_on DESC,id DESC',(user_id,)).fetchall()
     conn.close(); return [dict(r) for r in rows]
+def log_activity(user_id, action, details=''):
+    conn=db(); conn.execute('INSERT INTO activity_logs(user_id,action,details,created_at) VALUES(?,?,?,?)',(user_id,action,details,datetime.now().isoformat())); conn.commit(); conn.close()
+def save_conversation(user_id, month, message, answer, ai_enabled):
+    conn=db(); conn.execute('INSERT INTO conversations(user_id,month,user_message,assistant_response,ai_enabled,created_at) VALUES(?,?,?,?,?,?)',(user_id,month,message,answer,1 if ai_enabled else 0,datetime.now().isoformat())); conn.commit(); conn.close()
 def dashboard(user_id,month):
     budget=get_budget(user_id,month); expenses=get_expenses(user_id,month); totals={c:0 for c in CATEGORIES}; total=0
     for e in expenses: totals[e['category']]=totals.get(e['category'],0)+e['amount']; total+=e['amount']
@@ -74,7 +114,7 @@ def register():
 def login():
     if request.method=='POST':
         email=request.form.get('email','').strip().lower(); password=request.form.get('password',''); conn=db(); user=conn.execute('SELECT * FROM users WHERE email=?',(email,)).fetchone(); conn.close()
-        if user and check_password_hash(user['password_hash'],password): session.clear(); session['user_id']=user['id']; session['user_name']=user['name']; return redirect(url_for('home'))
+        if user and check_password_hash(user['password_hash'],password): session.clear(); session['user_id']=user['id']; session['user_name']=user['name']; log_activity(user['id'],'login','User signed in'); return redirect(url_for('home'))
         return render_template('login.html',error='Invalid email or password.')
     return render_template('login.html')
 @app.route('/logout')
@@ -84,7 +124,56 @@ def logout(): session.clear(); return redirect(url_for('login'))
 def home(): return render_template('index.html',user_name=session.get('user_name'))
 @app.route('/history')
 @login_required
-def history(): return render_template('history.html',expenses=get_expenses(session['user_id']),user_name=session.get('user_name'))
+def history():
+    return render_template('history.html', expenses=get_expenses(session['user_id']), user_name=session.get('user_name'))
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    uid = session['user_id']
+    conn = db()
+    user = conn.execute('SELECT id, name, email, created_at, password_hash FROM users WHERE id=?', (uid,)).fetchone()
+    if not user:
+        conn.close()
+        session.clear()
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        new_password = request.form.get('new_password', '')
+        current_password = request.form.get('current_password', '')
+
+        if not name or not email:
+            conn.close()
+            return render_template('profile.html', user=dict(user), error='Name and email are required.')
+
+        existing = conn.execute('SELECT id FROM users WHERE email=? AND id<>?', (email, uid)).fetchone()
+        if existing:
+            conn.close()
+            return render_template('profile.html', user=dict(user), error='This email is already used by another account.')
+
+        if new_password:
+            if len(new_password) < 6:
+                conn.close()
+                return render_template('profile.html', user=dict(user), error='New password must contain at least 6 characters.')
+            if not current_password or not check_password_hash(user['password_hash'], current_password):
+                conn.close()
+                return render_template('profile.html', user=dict(user), error='Current password is incorrect.')
+            conn.execute('UPDATE users SET name=?, email=?, password_hash=? WHERE id=?',
+                         (name, email, generate_password_hash(new_password), uid))
+        else:
+            conn.execute('UPDATE users SET name=?, email=? WHERE id=?', (name, email, uid))
+
+        conn.commit()
+        updated = conn.execute('SELECT id, name, email, created_at FROM users WHERE id=?', (uid,)).fetchone()
+        conn.close()
+        session['user_name'] = updated['name']
+        log_activity(uid,'profile_updated','Account details updated')
+        return render_template('profile.html', user=dict(updated), success='Profile updated successfully.')
+
+    conn.close()
+    return render_template('profile.html', user=dict(user))
 
 @app.get('/api/dashboard')
 @login_required
@@ -92,22 +181,69 @@ def api_dashboard(): return jsonify(dashboard(session['user_id'],request.args.ge
 @app.post('/api/budget')
 @login_required
 def api_budget():
-    data=request.get_json(force=True); month=data.get('month',month_now()); numeric=['income','savings_goal','food','transport','education','hostel','bills','shopping','entertainment','healthcare','subscriptions','other']; values={k:float(data.get(k,0) or 0) for k in numeric}; uid=session['user_id']; conn=db()
-    conn.execute('''INSERT INTO budgets(user_id,month,income,savings_goal,food,transport,education,hostel,bills,shopping,entertainment,healthcare,subscriptions,other) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,month) DO UPDATE SET income=excluded.income,savings_goal=excluded.savings_goal,food=excluded.food,transport=excluded.transport,education=excluded.education,hostel=excluded.hostel,bills=excluded.bills,shopping=excluded.shopping,entertainment=excluded.entertainment,healthcare=excluded.healthcare,subscriptions=excluded.subscriptions,other=excluded.other''',(uid,month,*[values[k] for k in numeric])); conn.commit(); conn.close(); return jsonify({'ok':True,'dashboard':dashboard(uid,month)})
+    data = request.get_json(silent=True) or {}
+    month = data.get('month', month_now())
+    numeric = [
+        'income', 'savings_goal', 'food', 'transport', 'education',
+        'hostel', 'bills', 'shopping', 'entertainment', 'healthcare',
+        'subscriptions', 'other'
+    ]
+
+    try:
+        values = {key: float(data.get(key, 0) or 0) for key in numeric}
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Budget values must be valid numbers.'}), 400
+
+    if any(value < 0 for value in values.values()):
+        return jsonify({'error': 'Budget values cannot be negative.'}), 400
+
+    uid = session['user_id']
+    conn = db()
+    try:
+        conn.execute('''
+            INSERT INTO budgets(
+                user_id, month, income, savings_goal, food, transport,
+                education, hostel, bills, shopping, entertainment,
+                healthcare, subscriptions, other
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(user_id,month) DO UPDATE SET
+                income=excluded.income,
+                savings_goal=excluded.savings_goal,
+                food=excluded.food,
+                transport=excluded.transport,
+                education=excluded.education,
+                hostel=excluded.hostel,
+                bills=excluded.bills,
+                shopping=excluded.shopping,
+                entertainment=excluded.entertainment,
+                healthcare=excluded.healthcare,
+                subscriptions=excluded.subscriptions,
+                other=excluded.other
+        ''', (uid, month, *[values[key] for key in numeric]))
+        conn.commit()
+    except sqlite3.Error as exc:
+        conn.rollback()
+        return jsonify({'error': f'Database error while saving budget: {exc}'}), 500
+    finally:
+        conn.close()
+
+    return jsonify({'ok': True, 'dashboard': dashboard(uid, month)})
 @app.post('/api/expenses')
 @login_required
 def add_expense():
     data=request.get_json(force=True); amount=float(data.get('amount',0)); category=data.get('category','Other'); description=data.get('description','').strip(); spent_on=data.get('spent_on') or datetime.now().strftime('%Y-%m-%d')
     if amount<=0:return jsonify({'error':'Amount must be greater than zero.'}),400
     if category not in CATEGORIES:return jsonify({'error':'Invalid category.'}),400
-    conn=db(); cur=conn.execute('INSERT INTO expenses(user_id,amount,category,description,spent_on) VALUES(?,?,?,?,?)',(session['user_id'],amount,category,description,spent_on)); conn.commit(); eid=cur.lastrowid; conn.close(); return jsonify({'ok':True,'id':eid})
+    conn=db(); cur=conn.execute('INSERT INTO expenses(user_id,amount,category,description,spent_on) VALUES(?,?,?,?,?)',(session['user_id'],amount,category,description,spent_on)); conn.commit(); eid=cur.lastrowid; conn.close(); log_activity(session['user_id'],'expense_added',f'{category}: ₹{amount:.2f}'); return jsonify({'ok':True,'id':eid})
 @app.get('/api/expenses')
 @login_required
 def list_expenses(): return jsonify(get_expenses(session['user_id'],request.args.get('month')))
 @app.delete('/api/expenses/<int:expense_id>')
 @login_required
 def delete_expense(expense_id):
-    conn=db(); conn.execute('DELETE FROM expenses WHERE id=? AND user_id=?',(expense_id,session['user_id'])); conn.commit(); conn.close(); return jsonify({'ok':True})
+    conn=db(); cur=conn.execute('DELETE FROM expenses WHERE id=? AND user_id=?',(expense_id,session['user_id'])); conn.commit(); deleted=cur.rowcount; conn.close();
+    if deleted: log_activity(session['user_id'],'expense_deleted',f'Expense ID {expense_id} deleted');
+    return jsonify({'ok':True})
 
 @app.post('/api/afford')
 @login_required
@@ -120,17 +256,6 @@ def afford():
     elif after<income*.10: status,score='Possible, but it would leave a small monthly buffer.',65
     else: status,score='Looks affordable within this month’s plan.',90
     return jsonify({'status':status,'score':score,'available_before_purchase':round(available,2),'remaining_after_purchase':round(after,2),'suggestion':'If this is optional, consider waiting 24–48 hours and comparing alternatives.' if not essential else 'Check whether the purchase can be covered without reducing your savings goal.'})
-@app.post('/api/loan')
-@login_required
-def loan():
-    d=request.get_json(force=True); p=float(d.get('principal',0)); r=float(d.get('annual_rate',0)); years=float(d.get('years',0))
-    if p<=0 or years<=0:return jsonify({'error':'Principal and years must be greater than zero.'}),400
-    n=years*12; mr=r/100/12; emi=p/n if mr==0 else p*mr*pow(1+mr,n)/(pow(1+mr,n)-1); total=emi*n
-    return jsonify({'emi':round(emi,2),'total_payment':round(total,2),'total_interest':round(total-p,2),'months':int(n),'explanation':'EMI is the regular monthly payment. Compare actual lender terms, fees and penalties.'})
-@app.get('/api/scholarships')
-@login_required
-def scholarships():
-    with open(os.path.join(BASE_DIR,'data','scholarships.json'),encoding='utf-8') as f:return jsonify(json.load(f))
 def fallback_advice(message,snapshot):
     total=snapshot.get('total_spent',0); remaining=snapshot.get('remaining',0); top=sorted(snapshot.get('category_spending',{}).items(),key=lambda x:x[1],reverse=True); top_text=', '.join(f'{k}: ₹{v:.0f}' for k,v in top[:3] if v>0) or 'No spending data yet.'
     return f'Here is a student-friendly analysis based on your numbers:\n\n• Total spending this month: ₹{total:.2f}\n• Money remaining against income: ₹{remaining:.2f}\n• Top spending areas: {top_text}\n\nSuggested next steps:\n1. Set a monthly savings target before discretionary spending.\n2. Review your highest category and reduce one realistic expense.\n3. Keep a small buffer for unexpected student expenses.\n\nYour question: {message}\n\nThis is educational guidance, not personalized financial advice.'
@@ -146,8 +271,28 @@ def advice():
     d=request.get_json(force=True); message=(d.get('message') or '').strip(); month=d.get('month',month_now())
     if not message:return jsonify({'error':'Please enter a question.'}),400
     snap=dashboard(session['user_id'],month)
-    try:return jsonify({'answer':watsonx_chat(message,snap),'ai_enabled':bool(os.getenv('IBM_CLOUD_API_KEY'))})
-    except Exception:return jsonify({'answer':fallback_advice(message,snap),'ai_enabled':False,'warning':'IBM watsonx.ai could not be reached; showing the local demo advisor.'})
+    try:
+        ai_enabled=bool(os.getenv('IBM_CLOUD_API_KEY'))
+        answer=watsonx_chat(message,snap)
+        save_conversation(session['user_id'],month,message,answer,ai_enabled)
+        log_activity(session['user_id'],'ai_advice','Saved a FinMate AI conversation')
+        return jsonify({'answer':answer,'ai_enabled':ai_enabled})
+    except Exception:
+        answer=fallback_advice(message,snap)
+        save_conversation(session['user_id'],month,message,answer,False)
+        return jsonify({'answer':answer,'ai_enabled':False,'warning':'IBM watsonx.ai could not be reached; showing the local demo advisor.'})
+
+@app.get('/api/conversations')
+@login_required
+def list_conversations():
+    conn=db(); rows=conn.execute('SELECT id,month,user_message,assistant_response,ai_enabled,created_at FROM conversations WHERE user_id=? ORDER BY created_at DESC',(session['user_id'],)).fetchall(); conn.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.get('/api/activity')
+@login_required
+def activity():
+    conn=db(); rows=conn.execute('SELECT action,details,created_at FROM activity_logs WHERE user_id=? ORDER BY created_at DESC LIMIT 100',(session['user_id'],)).fetchall(); conn.close()
+    return jsonify([dict(r) for r in rows])
 
 init_db()
 if __name__=='__main__': app.run(host='0.0.0.0',port=int(os.getenv('PORT','5000')),debug=True)
