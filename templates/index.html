@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinMate AI | Student Finance</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><div class="logo-mark">₹</div><div><strong>FinMate AI</strong><small>Student Finance</small></div></div>
+    <nav class="side-nav">
+      <button class="nav-item active" data-target="dashboard"><span>⌂</span> Dashboard</button>
+      <button class="nav-item" data-target="budget"><span>▣</span> Budget</button>
+      <button class="nav-item" data-target="expenses"><span>↗</span> Expenses</button>
+      <button class="nav-item" data-target="advisor"><span>✧</span> FinMate AI</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <a class="profile-link" href="{{ url_for('profile') }}">◉ <span>Profile</span></a>
+      <a class="history-link" href="{{ url_for('history') }}">◷ <span>History</span></a>
+      <a class="logout-link" href="{{ url_for('logout') }}">↪ <span>Logout</span></a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="main-header">
+      <div class="header-left"><button class="mobile-menu" id="mobileMenu" aria-label="Open menu">☰</button><div><p class="eyebrow">PERSONAL FINANCE DASHBOARD</p><h1 id="pageTitle">Welcome back, {{ user_name }}! 👋</h1></div></div>
+      <div class="header-right"><label class="month-picker"><span>▣</span><input id="month" type="month" aria-label="Select month"></label><a class="avatar profile-avatar" href="{{ url_for('profile') }}" title="Open profile">{{ (user_name or 'U')[0]|upper }}</a></div>
+    </header>
+
+    <section id="dashboard" class="panel active-panel">
+      <section class="welcome-card">
+        <div><span class="soft-badge">SMART FINANCIAL MANAGEMENT</span><h2>Your money.<br><span>Your future.</span></h2><p>Track expenses, manage your budget, and make smarter financial decisions.</p><button class="primary quick-expense" data-target="expenses">＋ Add Expense</button></div>
+        <div class="welcome-art"><div class="coin">₹</div><div class="mini-card">↗<br><small>Grow smarter</small></div></div>
+      </section>
+      <section class="stats">
+        <article class="stat stat-income"><div class="stat-icon">↗</div><span>Monthly Income</span><strong id="incomeStat">₹0</strong><small>Income or allowance</small></article>
+        <article class="stat stat-spent"><div class="stat-icon">↘</div><span>Total Expenses</span><strong id="spentStat">₹0</strong><small>Recorded this month</small></article>
+        <article class="stat stat-remaining"><div class="stat-icon">₹</div><span>Remaining Balance</span><strong id="remainingStat">₹0</strong><small>Available to manage</small></article>
+        <article class="stat stat-saving"><div class="stat-icon">★</div><span>Savings Goal</span><strong id="savingStat">₹0</strong><small>Monthly target</small></article>
+      </section>
+      <section class="dashboard-grid">
+        <article class="card"><div class="card-heading"><div><h3>Spending by category</h3><p>Your expenses this month</p></div></div><div id="categoryBars"></div></article>
+        <article class="card"><div class="card-heading"><div><h3>Quick insights</h3><p>Based on your current data</p></div></div><div id="insights"></div></article>
+      </section>
+      <article class="card"><div class="card-heading"><div><h3>Recent expenses</h3><p>Your latest transactions</p></div></div><div class="table-wrap" id="recentExpenses"></div></article>
+    </section>
+
+    <section id="budget" class="panel"><div class="page-intro"><h2>Budget Planner</h2><p>Plan your monthly income, savings and spending categories, then check whether a purchase fits your current plan.</p></div>
+      <article class="card"><form id="budgetForm" class="form-grid">
+        <label>Monthly income / allowance<input name="income" type="number" min="0" step="0.01" required></label><label>Savings goal<input name="savings_goal" type="number" min="0" step="0.01"></label>
+        <label>Food<input name="food" type="number" min="0" step="0.01"></label><label>Transport<input name="transport" type="number" min="0" step="0.01"></label>
+        <label>Education<input name="education" type="number" min="0" step="0.01"></label>
+        <label>Bills<input name="bills" type="number" min="0" step="0.01"></label><label>Shopping<input name="shopping" type="number" min="0" step="0.01"></label>
+        <label>Healthcare<input name="healthcare" type="number" min="0" step="0.01"></label>
+        
+        <div class="form-action"><button class="primary" type="submit">Save</button><span id="budgetMessage" class="message"></span></div>
+      </form></article>
+
+      <article class="card affordability-card">
+        <div class="card-heading"><div><h3>Can I afford this?</h3><p>Check a purchase against your selected month's income, actual spending and savings goal.</p></div></div>
+        <div class="dashboard-grid affordability-grid">
+          <div>
+            <div class="afford-summary">
+              <div><span>Monthly income</span><strong id="affordIncome">₹0</strong></div>
+              <div><span>Already spent</span><strong id="affordSpent">₹0</strong></div>
+              <div><span>Savings goal</span><strong id="affordSavings">₹0</strong></div>
+              <div><span>Available now</span><strong id="affordAvailable">₹0</strong></div>
+            </div>
+            <p class="muted">These values come automatically from your Budget and Expenses for the selected month.</p>
+          </div>
+          <form id="affordForm" class="stack">
+            <label>Purchase price (₹)<input name="price" type="number" min="0.01" step="0.01" required></label>
+            <label class="check"><input name="essential" type="checkbox"> This is an essential purchase</label>
+            <button class="primary" type="submit">Check Affordability</button>
+          </form>
+        </div>
+        <div id="affordResult"></div>
+      </article>
+    </section>
+
+    <section id="expenses" class="panel"><div class="page-intro"><h2>Expenses</h2><p>Add and review your monthly spending.</p></div><div class="dashboard-grid"><article class="card"><h3>Add an expense</h3><form id="expenseForm" class="stack"><label>Amount (₹)<input name="amount" type="number" min="0.01" step="0.01" required></label><label>Category<select name="category"><option>Food</option><option>Transport</option><option>Education</option><option>Hostel/Rent</option><option>Bills</option><option>Shopping</option><option>Entertainment</option><option>Healthcare</option><option>Subscriptions</option><option>Other</option></select></label><label>Description<input name="description" maxlength="100"></label><label>Date<input name="spent_on" type="date"></label><button class="primary">Add Expense</button></form></article><article class="card"><h3>Expense history</h3><div class="table-wrap" id="expenseTable"></div></article></div></section>
+    <section id="advisor" class="panel"><div class="page-intro"><h2>FinMate AI</h2><p>Your student-friendly financial literacy assistant.</p></div><div class="dashboard-grid"><article class="card"><form id="advisorForm" class="stack"><label>Your question<textarea name="message" rows="7" maxlength="2000" placeholder="Example: How can I reduce my food spending?" required></textarea></label><button class="primary">✧ Ask FinMate AI</button></form></article><article class="card"><h3>AI response</h3><div id="advisorResult" class="ai-response">Your answer will appear here.</div></article></div></section>
+    <footer>FinMate AI is an educational hackathon prototype and not a substitute for professional financial advice.</footer>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
