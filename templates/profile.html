@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Profile | FinMate AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="simple-page">
+  <main class="profile-page">
+    <a href="{{ url_for('home') }}" class="back-link">← Back to Dashboard</a>
+    <section class="profile-hero">
+      <div class="profile-avatar-large">{{ (user.name or 'U')[0]|upper }}</div>
+      <div>
+        <p class="eyebrow">ACCOUNT</p>
+        <h1>My Profile</h1>
+        <p>Manage your FinMate AI account details securely.</p>
+      </div>
+    </section>
+
+    {% if error %}<div class="profile-alert error">{{ error }}</div>{% endif %}
+    {% if success %}<div class="profile-alert success">{{ success }}</div>{% endif %}
+
+    <section class="profile-grid">
+      <article class="card profile-card">
+        <h2>Personal Information</h2>
+        <form method="post" class="stack profile-form">
+          <label>Full name
+            <input type="text" name="name" value="{{ user.name }}" maxlength="100" required>
+          </label>
+          <label>Email address
+            <input type="email" name="email" value="{{ user.email }}" maxlength="120" required>
+          </label>
+
+          <div class="profile-divider"><span>Change password (optional)</span></div>
+          <label>Current password
+            <input type="password" name="current_password" placeholder="Required only when changing password">
+          </label>
+          <label>New password
+            <input type="password" name="new_password" minlength="6" placeholder="Leave blank to keep current password">
+          </label>
+          <button class="primary" type="submit">Save Changes</button>
+        </form>
+      </article>
+
+      <aside class="profile-summary card">
+        <h2>Account Summary</h2>
+        <div class="summary-row"><span>Name</span><strong>{{ user.name }}</strong></div>
+        <div class="summary-row"><span>Email</span><strong>{{ user.email }}</strong></div>
+        <div class="summary-row"><span>Member since</span><strong>{{ user.created_at[:10] if user.created_at else '—' }}</strong></div>
+        <div class="profile-tip">💡 Keep your password private. FinMate AI will never ask for your OTP or bank password.</div>
+        <a class="secondary-button" href="{{ url_for('history') }}">View Expense History</a>
+        <a class="danger-button" href="{{ url_for('logout') }}">Logout</a>
+      </aside>
+    </section>
+  </main>
+</div>
+</body>
+</html>
