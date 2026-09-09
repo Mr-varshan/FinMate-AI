@@ -9,17 +9,23 @@
 <body>
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand"><div class="logo-mark">₹</div><div><strong>FinMate AI</strong><small>Student Finance</small></div></div>
+    <div class="sidebar-topbar">
+      <div class="sidebar-brand"><div class="logo-mark">₹</div><div><strong>FinMate</strong><small>Student Finance</small></div></div>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">‹</button>
+    </div>
     <nav class="side-nav">
-      <button class="nav-item active" data-target="dashboard"><span>⌂</span> Dashboard</button>
-      <button class="nav-item" data-target="budget"><span>▣</span> Budget</button>
-      <button class="nav-item" data-target="expenses"><span>↗</span> Expenses</button>
-      <button class="nav-item" data-target="advisor"><span>✧</span> FinMate AI</button>
+      <button class="nav-item active" data-target="dashboard"><span class="nav-icon">⌂</span><span class="nav-label">Dashboard</span></button>
+      <button class="nav-item" data-target="budget"><span class="nav-icon">▣</span><span class="nav-label">Budget</span></button>
+      <button class="nav-item" data-target="expenses"><span class="nav-icon">↗</span><span class="nav-label">Expenses</span></button>
+      <button class="nav-item" data-target="emergency"><span class="nav-icon">🚨</span><span class="nav-label">Emergency Mode</span></button>
+      <button class="nav-item" data-target="loans"><span class="nav-icon">🎓</span><span class="nav-label">Education Loans</span></button>
+      <button class="nav-item" data-target="scholarships"><span class="nav-icon">☆</span><span class="nav-label">Scholarships</span></button>
+      <button class="nav-item" data-target="advisor"><span class="nav-icon">✧</span><span class="nav-label">FinMate AI</span></button>
     </nav>
     <div class="sidebar-bottom">
-      <a class="profile-link" href="{{ url_for('profile') }}">◉ <span>Profile</span></a>
-      <a class="history-link" href="{{ url_for('history') }}">◷ <span>History</span></a>
-      <a class="logout-link" href="{{ url_for('logout') }}">↪ <span>Logout</span></a>
+      <a class="profile-link" href="{{ url_for('profile') }}"><span class="bottom-icon">◉</span><span class="bottom-label">Profile</span></a>
+      <a class="history-link" href="{{ url_for('history') }}"><span class="bottom-icon">◷</span><span class="bottom-label">History</span></a>
+      <a class="logout-link" href="{{ url_for('logout') }}"><span class="bottom-icon">↪</span><span class="bottom-label">Logout</span></a>
     </div>
   </aside>
 
@@ -35,13 +41,13 @@
         <div class="welcome-art"><div class="coin">₹</div><div class="mini-card">↗<br><small>Grow smarter</small></div></div>
       </section>
       <section class="stats">
-        <article class="stat stat-income"><div class="stat-icon">↗</div><span>Monthly Income</span><strong id="incomeStat">₹0</strong><small>Income or allowance</small></article>
-        <article class="stat stat-spent"><div class="stat-icon">↘</div><span>Total Expenses</span><strong id="spentStat">₹0</strong><small>Recorded this month</small></article>
+        <article class="stat stat-income"><div class="stat-icon">↘</div><span>Monthly Income</span><strong id="incomeStat">₹0</strong><small>Income or allowance</small></article>
+        <article class="stat stat-spent"><div class="stat-icon">↗</div><span>Total Expenses</span><strong id="spentStat">₹0</strong><small>Recorded this month</small></article>
         <article class="stat stat-remaining"><div class="stat-icon">₹</div><span>Remaining Balance</span><strong id="remainingStat">₹0</strong><small>Available to manage</small></article>
         <article class="stat stat-saving"><div class="stat-icon">★</div><span>Savings Goal</span><strong id="savingStat">₹0</strong><small>Monthly target</small></article>
       </section>
       <section class="dashboard-grid">
-        <article class="card"><div class="card-heading"><div><h3>Spending by category</h3><p>Your expenses this month</p></div></div><div id="categoryBars"></div></article>
+        <article class="card"><div class="card-heading"><div><h3>Money Spend</h3><p>Your expenses this month</p></div></div><div id="categoryBars"></div></article>
         <article class="card"><div class="card-heading"><div><h3>Quick insights</h3><p>Based on your current data</p></div></div><div id="insights"></div></article>
       </section>
       <article class="card"><div class="card-heading"><div><h3>Recent expenses</h3><p>Your latest transactions</p></div></div><div class="table-wrap" id="recentExpenses"></div></article>
@@ -52,7 +58,7 @@
         <label>Monthly income / allowance<input name="income" type="number" min="0" step="0.01" required></label><label>Savings goal<input name="savings_goal" type="number" min="0" step="0.01"></label>
         <label>Food<input name="food" type="number" min="0" step="0.01"></label><label>Transport<input name="transport" type="number" min="0" step="0.01"></label>
         <label>Education<input name="education" type="number" min="0" step="0.01"></label>
-        <label>Bills<input name="bills" type="number" min="0" step="0.01"></label><label>Shopping<input name="shopping" type="number" min="0" step="0.01"></label>
+        
         <label>Healthcare<input name="healthcare" type="number" min="0" step="0.01"></label>
         
         <div class="form-action"><button class="primary" type="submit">Save</button><span id="budgetMessage" class="message"></span></div>
@@ -80,8 +86,226 @@
       </article>
     </section>
 
-    <section id="expenses" class="panel"><div class="page-intro"><h2>Expenses</h2><p>Add and review your monthly spending.</p></div><div class="dashboard-grid"><article class="card"><h3>Add an expense</h3><form id="expenseForm" class="stack"><label>Amount (₹)<input name="amount" type="number" min="0.01" step="0.01" required></label><label>Category<select name="category"><option>Food</option><option>Transport</option><option>Education</option><option>Hostel/Rent</option><option>Bills</option><option>Shopping</option><option>Entertainment</option><option>Healthcare</option><option>Subscriptions</option><option>Other</option></select></label><label>Description<input name="description" maxlength="100"></label><label>Date<input name="spent_on" type="date"></label><button class="primary">Add Expense</button></form></article><article class="card"><h3>Expense history</h3><div class="table-wrap" id="expenseTable"></div></article></div></section>
+    <section id="expenses" class="panel">
+      <div class="page-intro">
+        <h2>Expenses</h2>
+        <p>Add and review your monthly spending.</p>
+      </div><div class="dashboard-grid">
+        <article class="card">
+          <h3>Add an expense</h3>
+          <form id="expenseForm" class="stack">
+            <label>Amount (₹)<input name="amount" type="number" min="0.01" step="0.01" required></label>
+            <label>Category<select name="category">
+              <option>Food</option>
+              <option>Transport</option>
+              <option>Education</option>
+              <option>Hostel/Rent</option>
+              <option>Shopping</option>
+              <option>Entertainment</option>
+              <option>Healthcare</option>
+              <option>Subscriptions</option>
+              <option>Other</option>
+            </select></label>
+            <label>Description<input name="description" maxlength="100">
+            </label>
+            <label>Date<input name="spent_on" type="date"></label>
+            <button class="primary">Add Expense</button>
+          </form>
+        </article>
+        <article class="card">
+          <h3>Expense history</h3>
+          <div class="table-wrap" id="expenseTable"></div>
+        </article>
+      </div>
+    </section>
+
     <section id="advisor" class="panel"><div class="page-intro"><h2>FinMate AI</h2><p>Your student-friendly financial literacy assistant.</p></div><div class="dashboard-grid"><article class="card"><form id="advisorForm" class="stack"><label>Your question<textarea name="message" rows="7" maxlength="2000" placeholder="Example: How can I reduce my food spending?" required></textarea></label><button class="primary">✧ Ask FinMate AI</button></form></article><article class="card"><h3>AI response</h3><div id="advisorResult" class="ai-response">Your answer will appear here.</div></article></div></section>
+
+    <section id="emergency" class="panel">
+      <div class="page-intro">
+        <span class="soft-badge emergency-badge">FINMATE SAFETY NET</span>
+        <h2>🚨 Financial Emergency Mode</h2>
+        <p>When money is tight, FinMate separates essential spending from flexible spending and gives you a practical plan for the rest of the month.</p>
+      </div>
+
+      <article class="card emergency-hero">
+        <div>
+          <div class="emergency-status" id="emergencyStatus">Checking your financial safety...</div>
+          <h3 id="emergencyHeadline">Your emergency plan will appear here.</h3>
+          <p id="emergencySummary" class="muted">FinMate uses your selected month's income, expenses and savings goal. Your existing budget model is not changed.</p>
+        </div>
+        <button class="primary emergency-refresh" id="emergencyRefresh" type="button">↻ Recalculate</button>
+      </article>
+
+      <section class="stats emergency-stats">
+        <article class="stat stat-remaining"><div class="stat-icon">₹</div><span>Emergency-ready balance</span><strong id="emergencyAvailable">₹0</strong><small>After protecting your savings goal</small></article>
+        <article class="stat stat-saving"><div class="stat-icon">◷</div><span>Days left</span><strong id="emergencyDays">0</strong><small>In the selected month</small></article>
+        <article class="stat stat-income"><div class="stat-icon">✓</div><span>Essential spending</span><strong id="emergencyEssential">₹0</strong><small>Food, transport, education, housing and health</small></article>
+        <article class="stat stat-spent"><div class="stat-icon">!</div><span>Flexible spending</span><strong id="emergencyOptional">₹0</strong><small>Shopping, entertainment and subscriptions</small></article>
+      </section>
+
+      <div class="dashboard-grid">
+        <article class="card">
+          <div class="card-heading"><div><h3>Emergency daily plan</h3><p>Use this as a spending ceiling, not as extra money.</p></div></div>
+          <div class="emergency-plan">
+            <div><span>Safe daily limit</span><strong id="emergencyDailyLimit">₹0</strong></div>
+            <div><span>Essential daily estimate</span><strong id="emergencyEssentialDaily">₹0</strong></div>
+            <div><span>Daily flexible allowance</span><strong id="emergencyFlexibleDaily">₹0</strong></div>
+          </div>
+          <div class="emergency-meter"><div class="emergency-meter-label"><span>Essential spending pressure</span><strong id="emergencyPressure">0%</strong></div><div class="bar-track"><div class="bar" id="emergencyPressureBar" style="width:0%"></div></div></div>
+        </article>
+
+        <article class="card">
+          <div class="card-heading"><div><h3>What to cut first</h3><p>Flexible categories with recorded spending this month.</p></div></div>
+          <div id="emergencyCuts" class="emergency-cuts"><p class="muted">No flexible spending recommendations yet.</p></div>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-heading"><div><h3>Your emergency checklist</h3><p>Simple actions for the next few days.</p></div></div>
+        <div id="emergencyActions" class="emergency-actions"></div>
+      </article>
+    </section>
+
+
+    <section id="loans" class="panel">
+      <div class="page-intro">
+        <span class="soft-badge">OFFICIAL GOVERNMENT OPTIONS</span>
+        <h2>Education Loans</h2>
+        <p>Real education-loan schemes and the official portals students can use to apply or verify eligibility.</p>
+      </div>
+
+      <div class="dashboard-grid feature-grid">
+        <article class="card feature-card loan-card">
+          <div class="feature-icon">▤</div>
+          <h3>PM-Vidyalaxmi Education Loan</h3>
+          <p class="muted">Unified Government of India portal for education-loan applications and interest-subvention services.</p>
+          <ul class="feature-list">
+            <li><strong>Who:</strong> Students pursuing higher education in eligible Quality Higher Education Institutions (QHEIs).</li>
+            <li><strong>Loan:</strong> Collateral-free and guarantor-free education loan under the PM-Vidyalaxmi scheme, subject to the scheme and bank conditions.</li>
+            <li><strong>Income:</strong> Students of all family-income groups can seek the education loan; interest-subvention eligibility is separate.</li>
+            <li><strong>Use:</strong> Tuition/course fees and eligible education-related expenses such as hostel, mess, laptop and living expenses as applicable.</li>
+          </ul>
+          <a class="loan-apply-btn"
+            href="https://pmvidyalaxmi.co.in/"
+            target="_blank"
+            rel="noopener">
+            Apply / Check PM-Vidyalaxmi
+            <span class="arrow">→  </span>
+            </a>
+        </article>
+
+        <article class="card feature-card">
+          <div class="feature-icon">%</div>
+          <h3>PM-USP Central Sector Interest Subsidy (CSIS)</h3>
+          <p class="muted">Interest support for eligible students who take an education loan for approved technical/professional courses.</p>
+          <ul class="feature-list">
+            <li><strong>Family income:</strong> Up to ₹4.5 lakh per year.</li>
+            <li><strong>Course:</strong> Eligible technical/professional higher-education courses in approved institutions.</li>
+            <li><strong>Benefit:</strong> Full interest subsidy during the moratorium period for eligible loans, subject to current CSIS rules.</li>
+            <li><strong>Important:</strong> Eligibility depends on the institution, course, loan and scheme conditions.</li>
+          </ul>
+          <a class="loan-apply-btn" href="https://www.education.gov.in/scholarships-education-loan-4" target="_blank" rel="noopener">Apply CSIS <span class="arrow">→</span></a>
+        </article>
+      </div>
+
+      <article class="card official-card">
+        <h3>How to apply</h3>
+        <div class="steps-grid">
+          <div><strong>1</strong><span>Register on PM-Vidyalaxmi</span></div>
+          <div><strong>2</strong><span>Fill the Common Education Loan Application Form</span></div>
+          <div><strong>3</strong><span>Select eligible banks and submit</span></div>
+          <div><strong>4</strong><span>Track sanction, disbursement and applicable interest support</span></div>
+        </div>
+        <p class="feature-note">FinMate AI does not approve loans. Final sanction, interest rate, security requirements and disbursement are decided by the selected bank after verification.</p>
+      </article>
+    </section>
+
+    <section id="scholarships" class="panel">
+      <div class="page-intro">
+        <span class="soft-badge">NATIONAL SCHOLARSHIP PORTAL • AY 2026–27</span>
+        <h2>Scholarships</h2>
+        <p>Actual scholarship schemes currently listed on the Government of India's National Scholarship Portal (NSP).</p>
+      </div>
+
+      <div class="scholarship-grid">
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">CENTRAL SECTOR</span><span class="status-dot">Open / Renewal</span></div>
+          <h3>PM-USP Central Sector Scheme of Scholarship (CSSS)</h3>
+          <p>Merit-based scholarship for eligible college and university students.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Renewal closes 30 Sep 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">PERSONS WITH DISABILITIES</span><span class="status-dot">Open</span></div>
+          <h3>Post-Matric Scholarship for Students with Disabilities</h3>
+          <p>Welfare-based scholarship for eligible students with disabilities studying after matriculation.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Apply by 31 Oct 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">OBC / EBC / DNT</span><span class="status-dot">Open</span></div>
+          <h3>PM YASASVI — Top Class Education in College</h3>
+          <p>Merit-based central sector support for eligible OBC, EBC and DNT students.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Apply by 31 Oct 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">AICTE • TECHNICAL DEGREE</span><span class="status-dot">Open</span></div>
+          <h3>AICTE Pragati Scholarship — Girl Students</h3>
+          <p>Merit-based scholarship for eligible girl students pursuing technical degree programmes.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Apply by 31 Oct 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">AICTE • TECHNICAL DEGREE</span><span class="status-dot">Open</span></div>
+          <h3>AICTE Saksham Scholarship — Specially Abled Students</h3>
+          <p>Welfare-based scholarship for eligible specially abled students in technical degree programmes.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Apply by 31 Oct 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">AICTE • TECHNICAL DEGREE</span><span class="status-dot">Open</span></div>
+          <h3>AICTE Swanath Scholarship — Technical Degree</h3>
+          <p>Welfare-based scholarship for eligible students under the Swanath scheme.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Apply by 31 Oct 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">SC • CENTRAL SECTOR</span><span class="status-dot">Open</span></div>
+          <h3>Top Class Education for SC Students</h3>
+          <p>Merit-based central sector scholarship for eligible SC students in notified institutions.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Apply by 31 Oct 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+
+        <article class="card scholarship-card">
+          <div class="scholarship-meta"><span class="scheme-tag">ST • HIGHER EDUCATION</span><span class="status-dot">Open</span></div>
+          <h3>National Fellowship & Scholarship for Higher Education of ST Students</h3>
+          <p>Merit-based scholarship support for eligible ST students in higher education.</p>
+          <div class="scheme-meta"><span>AY 2026–27</span><span>Apply by 31 Oct 2026</span></div>
+          <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Check eligibility & apply</a>
+        </article>
+      </div>
+
+      <article class="card official-card">
+        <h3>Before applying</h3>
+        <ul class="feature-list">
+          <li>Academic Year <strong>2026–27</strong> is open on NSP.</li>
+          <li><strong>One Time Registration (OTR)</strong> is required to apply through NSP.</li>
+          <li>Students can apply for one merit-based scholarship and one or more welfare-based scholarships, subject to each scheme's eligibility rules.</li>
+          <li>Always verify the exact income, marks, category, institution and course requirements on the official scheme page before submitting an application.</li>
+        </ul>
+        <a class="primary link-button" href="https://scholarships.gov.in/All-Scholarships" target="_blank" rel="noopener">Open National Scholarship Portal</a>
+      </article>
+    </section>
+
     <footer>FinMate AI is an educational hackathon prototype and not a substitute for professional financial advice.</footer>
   </main>
 </div>
